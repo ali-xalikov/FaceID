@@ -10,6 +10,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "today" | "workers" | "history"
+  >("overview");
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7) // "2026-09"
   );
@@ -112,7 +115,6 @@ export default function AdminDashboard() {
       return;
 
     try {
-      // Avval yuzini o'chiramiz
       const facesRes = await fetch(`${MOKKY_URL}/faces?worker_id=${id}`);
       const faces = await facesRes.json();
       if (Array.isArray(faces)) {
@@ -121,7 +123,6 @@ export default function AdminDashboard() {
         }
       }
 
-      // Keyin xodimni o'chiramiz
       const res = await fetch(`${MOKKY_URL}/workers/${id}`, {
         method: "DELETE",
       });
@@ -139,279 +140,487 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
-        Yuklanmoqda...
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-300">
+        <div className="flex items-center space-x-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+          <span className="font-medium text-sm">Yuklanmoqda...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6 text-white">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <div className="flex gap-3">
+    <div className="flex min-h-screen bg-zinc-950 text-zinc-100 font-sans">
+      {/* Chap Yon Menyu (Sidebar) */}
+      <aside className="hidden md:flex w-64 flex-col border-r border-zinc-800/80 bg-zinc-900/50 p-4">
+        <div className="flex items-center gap-3 px-3 py-4 border-b border-zinc-800/60 mb-6">
+          <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">
+            A
+          </div>
+          <div>
+            <h2 className="font-semibold text-white text-sm">Control Panel</h2>
+            <p className="text-xs text-zinc-400">Admin Dashboard</p>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-1">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "overview"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+            }`}
+          >
+            <span>📊</span> Umumiy ko'rinish
+          </button>
+          <button
+            onClick={() => setActiveTab("today")}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "today"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+            }`}
+          >
+            <span>📅</span> Bugungi davomat
+          </button>
+          <button
+            onClick={() => setActiveTab("workers")}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "workers"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+            }`}
+          >
+            <span>👥</span> Xodimlar
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "history"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+            }`}
+          >
+            <span>📜</span> Oylik hisobot
+          </button>
+        </nav>
+
+        <div className="border-t border-zinc-800/60 pt-4 mt-auto">
+          <div className="rounded-xl bg-zinc-950/60 p-3 border border-zinc-800/60">
+            <p className="text-xs text-zinc-400">Tizim holati</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-xs font-medium text-emerald-400">
+                Faol (Mokky API)
+              </span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Asosiy Tarkib (Main Content) */}
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Top Header Panel */}
+        <header className="flex items-center justify-between border-b border-zinc-800/80 bg-zinc-900/30 px-6 py-4 backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            {/* Mobil Menyular Tugmasi */}
+            <div className="md:hidden flex gap-2 overflow-x-auto py-1">
+              <button
+                onClick={() => setActiveTab("overview")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                  activeTab === "overview"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-zinc-800 text-zinc-400"
+                }`}
+              >
+                Umumiy
+              </button>
+              <button
+                onClick={() => setActiveTab("today")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                  activeTab === "today"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-zinc-800 text-zinc-400"
+                }`}
+              >
+                Davomat
+              </button>
+              <button
+                onClick={() => setActiveTab("workers")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                  activeTab === "workers"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-zinc-800 text-zinc-400"
+                }`}
+              >
+                Xodimlar
+              </button>
+              <button
+                onClick={() => setActiveTab("history")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                  activeTab === "history"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-zinc-800 text-zinc-400"
+                }`}
+              >
+                Hisobot
+              </button>
+            </div>
+            <h1 className="hidden md:block text-xl font-bold text-white">
+              {activeTab === "overview" && "Umumiy ko'rinish"}
+              {activeTab === "today" && "Bugungi davomat"}
+              {activeTab === "workers" && "Xodimlar ro'yxati"}
+              {activeTab === "history" && "Oylik hisobotlar"}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
             >
-              {showAddForm ? "Yopish" : "+ Yangi xodim"}
+              <span>+</span>{" "}
+              <span className="hidden sm:inline">Yangi xodim</span>
             </button>
             <button
               onClick={loadData}
-              className="rounded-lg bg-zinc-700 px-4 py-2 text-sm hover:bg-zinc-600"
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900/80 px-3.5 py-2 text-sm font-medium text-zinc-300 shadow-sm transition-all hover:bg-zinc-800 hover:text-white"
             >
-              Yangilash
+              🔄
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Yangi xodim formasi */}
-        {showAddForm && (
-          <form
-            onSubmit={handleAddWorker}
-            className="mb-8 rounded-xl border border-zinc-700 bg-zinc-900 p-6"
-          >
-            <h2 className="mb-4 text-lg font-semibold">Yangi xodim qo‘shish</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <input
-                placeholder="To‘liq ism *"
-                value={newWorker.name}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, name: e.target.value })
-                }
-                className="rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2.5 outline-none focus:border-blue-500"
-                required
-              />
-              <input
-                placeholder="Lavozim"
-                value={newWorker.position}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, position: e.target.value })
-                }
-                className="rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2.5 outline-none focus:border-blue-500"
-              />
-              <input
-                placeholder="Bo‘lim"
-                value={newWorker.department}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, department: e.target.value })
-                }
-                className="rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2.5 outline-none focus:border-blue-500"
-              />
-              <input
-                placeholder="Telefon"
-                value={newWorker.phone}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, phone: e.target.value })
-                }
-                className="rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2.5 outline-none focus:border-blue-500"
-              />
-              <input
-                placeholder="Login *"
-                value={newWorker.username}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, username: e.target.value })
-                }
-                className="rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2.5 outline-none focus:border-blue-500"
-                required
-              />
-              <input
-                placeholder="Parol *"
-                type="password"
-                value={newWorker.password}
-                onChange={(e) =>
-                  setNewWorker({ ...newWorker, password: e.target.value })
-                }
-                className="rounded-lg border border-zinc-600 bg-zinc-800 px-4 py-2.5 outline-none focus:border-blue-500"
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={adding}
-              className="mt-4 rounded-lg bg-emerald-600 px-6 py-2.5 font-medium hover:bg-emerald-700 disabled:opacity-50"
+        <div className="p-6 space-y-8 flex-1 overflow-y-auto">
+          {/* Yangi xodim formasi */}
+          {showAddForm && (
+            <form
+              onSubmit={handleAddWorker}
+              className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 backdrop-blur-sm shadow-xl transition-all"
             >
-              {adding ? "Saqlanmoqda..." : "Saqlash"}
-            </button>
-          </form>
-        )}
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                  Yangi xodim biriktirish
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="text-zinc-500 hover:text-zinc-300 text-sm"
+                >
+                  ✕ Yopish
+                </button>
+              </div>
 
-        {/* Statistika */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5">
-            <p className="text-sm text-zinc-400">Bugungi kelganlar</p>
-            <p className="mt-1 text-3xl font-bold text-emerald-400">
-              {todayRecords.length}
-            </p>
-          </div>
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5">
-            <p className="text-sm text-zinc-400">Jami jarima</p>
-            <p className="mt-1 text-3xl font-bold text-red-400">
-              {totalFine.toLocaleString()} so'm
-            </p>
-          </div>
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5">
-            <p className="text-sm text-zinc-400">Shu oy jarimasi</p>
-            <p className="mt-1 text-3xl font-bold text-orange-400">
-              {monthFine.toLocaleString()} so'm
-            </p>
-          </div>
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5">
-            <p className="text-sm text-zinc-400">Xodimlar</p>
-            <p className="mt-1 text-3xl font-bold text-blue-400">
-              {workers.length}
-            </p>
-          </div>
-        </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <input
+                  placeholder="To‘liq ism *"
+                  value={newWorker.name}
+                  onChange={(e) =>
+                    setNewWorker({ ...newWorker, name: e.target.value })
+                  }
+                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  required
+                />
+                <input
+                  placeholder="Lavozim"
+                  value={newWorker.position}
+                  onChange={(e) =>
+                    setNewWorker({ ...newWorker, position: e.target.value })
+                  }
+                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+                <input
+                  placeholder="Bo‘lim"
+                  value={newWorker.department}
+                  onChange={(e) =>
+                    setNewWorker({ ...newWorker, department: e.target.value })
+                  }
+                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+                <input
+                  placeholder="Telefon"
+                  value={newWorker.phone}
+                  onChange={(e) =>
+                    setNewWorker({ ...newWorker, phone: e.target.value })
+                  }
+                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+                <input
+                  placeholder="Login *"
+                  value={newWorker.username}
+                  onChange={(e) =>
+                    setNewWorker({ ...newWorker, username: e.target.value })
+                  }
+                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  required
+                />
+                <input
+                  placeholder="Parol *"
+                  type="password"
+                  value={newWorker.password}
+                  onChange={(e) =>
+                    setNewWorker({ ...newWorker, password: e.target.value })
+                  }
+                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  required
+                />
+              </div>
 
-        {/* Oy tanlash */}
-        <div className="mb-6 flex items-center gap-3">
-          <label className="text-sm text-zinc-400">Oy bo‘yicha:</label>
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-1.5 text-sm outline-none"
-          />
-        </div>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={adding}
+                  className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {adding ? "Saqlanmoqda..." : "Saqlash"}
+                </button>
+              </div>
+            </form>
+          )}
 
-        {/* Bugungi davomat */}
-        <div className="mb-10">
-          <h2 className="mb-4 text-xl font-semibold">
-            Bugungi davomat ({today})
-          </h2>
-          <div className="overflow-x-auto rounded-xl border border-zinc-700">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-800">
-                <tr>
-                  <th className="p-3">Xodim</th>
-                  <th className="p-3">Kelish</th>
-                  <th className="p-3">Chiqish</th>
-                  <th className="p-3">Kechikish</th>
-                  <th className="p-3">Jarima</th>
-                  <th className="p-3">Holat</th>
-                </tr>
-              </thead>
-              <tbody>
-                {todayRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-6 text-center text-zinc-500">
-                      Bugun hali hech kim kelmagan
-                    </td>
-                  </tr>
-                ) : (
-                  todayRecords.map((a) => (
-                    <tr key={a.id} className="border-t border-zinc-800">
-                      <td className="p-3 font-medium">
-                        {getWorkerName(a.worker_id)}
-                      </td>
-                      <td className="p-3">{a.check_in}</td>
-                      <td className="p-3">{a.check_out || "—"}</td>
-                      <td className="p-3">{a.late_minutes} daq</td>
-                      <td className="p-3 text-red-400">
-                        {a.fine > 0 ? `${a.fine.toLocaleString()} so'm` : "—"}
-                      </td>
-                      <td className="p-3">
-                        <span
-                          className={`rounded px-2 py-0.5 text-xs ${
-                            a.status === "late"
-                              ? "bg-red-900/60 text-red-300"
-                              : "bg-emerald-900/60 text-emerald-300"
-                          }`}
-                        >
-                          {a.status === "late" ? "Kechikdi" : "O'z vaqtida"}
-                        </span>
-                      </td>
+          {/* Tab 1: Overview */}
+          {(activeTab === "overview" || activeTab === "today") && (
+            <>
+              {/* Statistika Kartochkalari */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Bugungi kelganlar
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-emerald-400">
+                    {todayRecords.length}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Jami jarima
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-red-400">
+                    {totalFine.toLocaleString()}{" "}
+                    <span className="text-xs font-normal text-zinc-500">
+                      so'm
+                    </span>
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Shu oy jarimasi
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-amber-400">
+                    {monthFine.toLocaleString()}{" "}
+                    <span className="text-xs font-normal text-zinc-500">
+                      so'm
+                    </span>
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Jami Xodimlar
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-sky-400">
+                    {workers.length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Bugungi davomat jadvali */}
+              <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5">
+                <h2 className="mb-4 text-lg font-semibold text-white">
+                  Bugungi davomat{" "}
+                  <span className="text-sm font-normal text-zinc-400">
+                    ({today})
+                  </span>
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-400">
+                      <tr>
+                        <th className="py-3 px-4 font-medium">Xodim</th>
+                        <th className="py-3 px-4 font-medium">Kelish</th>
+                        <th className="py-3 px-4 font-medium">Chiqish</th>
+                        <th className="py-3 px-4 font-medium">Kechikish</th>
+                        <th className="py-3 px-4 font-medium">Jarima</th>
+                        <th className="py-3 px-4 font-medium">Holat</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/50">
+                      {todayRecords.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="py-6 text-center text-zinc-500"
+                          >
+                            Bugun hali hech kim kelmagan
+                          </td>
+                        </tr>
+                      ) : (
+                        todayRecords.map((a) => (
+                          <tr
+                            key={a.id}
+                            className="transition-colors hover:bg-zinc-800/30"
+                          >
+                            <td className="py-3.5 px-4 font-medium text-white">
+                              {getWorkerName(a.worker_id)}
+                            </td>
+                            <td className="py-3.5 px-4 text-zinc-300">
+                              {a.check_in}
+                            </td>
+                            <td className="py-3.5 px-4 text-zinc-300">
+                              {a.check_out || "—"}
+                            </td>
+                            <td className="py-3.5 px-4 text-zinc-300">
+                              {a.late_minutes} daq
+                            </td>
+                            <td className="py-3.5 px-4 font-medium text-red-400">
+                              {a.fine > 0
+                                ? `${a.fine.toLocaleString()} so'm`
+                                : "—"}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                  a.status === "late"
+                                    ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                                    : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                }`}
+                              >
+                                {a.status === "late"
+                                  ? "Kechikdi"
+                                  : "O'z vaqtida"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Tab 2: Workers */}
+          {(activeTab === "overview" || activeTab === "workers") && (
+            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5">
+              <h2 className="mb-4 text-lg font-semibold text-white">
+                Xodimlar ro‘yxati
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-400">
+                    <tr>
+                      <th className="py-3 px-4 font-medium">ID</th>
+                      <th className="py-3 px-4 font-medium">Ism</th>
+                      <th className="py-3 px-4 font-medium">Lavozim</th>
+                      <th className="py-3 px-4 font-medium">Login</th>
+                      <th className="py-3 px-4 font-medium text-right">Amal</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Xodimlar ro'yxati + o'chirish */}
-        <div className="mb-10">
-          <h2 className="mb-4 text-xl font-semibold">Xodimlar ro‘yxati</h2>
-          <div className="overflow-x-auto rounded-xl border border-zinc-700">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-800">
-                <tr>
-                  <th className="p-3">ID</th>
-                  <th className="p-3">Ism</th>
-                  <th className="p-3">Lavozim</th>
-                  <th className="p-3">Login</th>
-                  <th className="p-3">Amal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workers.map((w) => (
-                  <tr key={w.id} className="border-t border-zinc-800">
-                    <td className="p-3">{w.id}</td>
-                    <td className="p-3 font-medium">{w.name}</td>
-                    <td className="p-3">{w.position || "—"}</td>
-                    <td className="p-3">{w.username || "—"}</td>
-                    <td className="p-3">
-                      <button
-                        onClick={() => handleDeleteWorker(w.id, w.name)}
-                        className="rounded bg-red-600/80 px-3 py-1 text-xs hover:bg-red-600"
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/50">
+                    {workers.map((w) => (
+                      <tr
+                        key={w.id}
+                        className="transition-colors hover:bg-zinc-800/30"
                       >
-                        O‘chirish
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                        <td className="py-3.5 px-4 text-zinc-400">#{w.id}</td>
+                        <td className="py-3.5 px-4 font-medium text-white">
+                          {w.name}
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-300">
+                          {w.position || "—"}
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-300">
+                          {w.username || "—"}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => handleDeleteWorker(w.id, w.name)}
+                            className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-1 text-xs font-medium text-red-400 transition-all hover:bg-red-500 hover:text-white"
+                          >
+                            O‘chirish
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
-        {/* Tanlangan oy yozuvlari */}
-        <div>
-          <h2 className="mb-4 text-xl font-semibold">
-            {selectedMonth} oyi — jami jarima:{" "}
-            <span className="text-orange-400">
-              {monthFine.toLocaleString()} so'm
-            </span>
-          </h2>
-          <div className="overflow-x-auto rounded-xl border border-zinc-700">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-800">
-                <tr>
-                  <th className="p-3">Sana</th>
-                  <th className="p-3">Xodim</th>
-                  <th className="p-3">Kelish</th>
-                  <th className="p-3">Chiqish</th>
-                  <th className="p-3">Jarima</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-6 text-center text-zinc-500">
-                      Bu oyda yozuv yo‘q
-                    </td>
-                  </tr>
-                ) : (
-                  [...monthRecords].reverse().map((a) => (
-                    <tr key={a.id} className="border-t border-zinc-800">
-                      <td className="p-3">{a.date}</td>
-                      <td className="p-3">{getWorkerName(a.worker_id)}</td>
-                      <td className="p-3">{a.check_in}</td>
-                      <td className="p-3">{a.check_out || "—"}</td>
-                      <td className="p-3 text-red-400">
-                        {a.fine > 0 ? `${a.fine.toLocaleString()} so'm` : "—"}
-                      </td>
+          {/* Tab 3: History */}
+          {(activeTab === "overview" || activeTab === "history") && (
+            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-lg font-semibold text-white">
+                  {selectedMonth} oyi hisoboti — jami:{" "}
+                  <span className="text-amber-400 font-bold">
+                    {monthFine.toLocaleString()} so'm
+                  </span>
+                </h2>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-400">
+                    <tr>
+                      <th className="py-3 px-4 font-medium">Sana</th>
+                      <th className="py-3 px-4 font-medium">Xodim</th>
+                      <th className="py-3 px-4 font-medium">Kelish</th>
+                      <th className="py-3 px-4 font-medium">Chiqish</th>
+                      <th className="py-3 px-4 font-medium">Jarima</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800/50">
+                    {monthRecords.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="py-6 text-center text-zinc-500"
+                        >
+                          Bu oyda yozuv yo‘q
+                        </td>
+                      </tr>
+                    ) : (
+                      [...monthRecords].reverse().map((a) => (
+                        <tr
+                          key={a.id}
+                          className="transition-colors hover:bg-zinc-800/30"
+                        >
+                          <td className="py-3.5 px-4 font-mono text-xs text-zinc-400">
+                            {a.date}
+                          </td>
+                          <td className="py-3.5 px-4 font-medium text-white">
+                            {getWorkerName(a.worker_id)}
+                          </td>
+                          <td className="py-3.5 px-4 text-zinc-300">
+                            {a.check_in}
+                          </td>
+                          <td className="py-3.5 px-4 text-zinc-300">
+                            {a.check_out || "—"}
+                          </td>
+                          <td className="py-3.5 px-4 font-medium text-red-400">
+                            {a.fine > 0
+                              ? `${a.fine.toLocaleString()} so'm`
+                              : "—"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

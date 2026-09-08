@@ -310,17 +310,17 @@ export default function FaceCamera({ currentUser }: Props) {
           );
 
           const isMatch = dist < 0.5;
-          ctx.strokeStyle = isMatch ? "#00ff00" : "#ff0000";
+          ctx.strokeStyle = isMatch ? "#3ED598" : "#F0665A";
           ctx.lineWidth = 3;
           ctx.strokeRect(box.x, box.y, box.width, box.height);
 
           const text = isMatch ? `${myFace.name} ✓` : "Noma'lum";
-          ctx.font = "bold 18px Arial";
+          ctx.font = "600 16px 'Space Grotesk', sans-serif";
           const tw = ctx.measureText(text).width;
-          ctx.fillStyle = isMatch ? "#00ff00" : "#ff0000";
-          ctx.fillRect(box.x, Math.max(box.y - 28, 0), tw + 12, 28);
-          ctx.fillStyle = "#000";
-          ctx.fillText(text, box.x + 6, Math.max(box.y - 8, 20));
+          ctx.fillStyle = isMatch ? "#3ED598" : "#F0665A";
+          ctx.fillRect(box.x, Math.max(box.y - 26, 0), tw + 14, 26);
+          ctx.fillStyle = "#0B0D10";
+          ctx.fillText(text, box.x + 7, Math.max(box.y - 7, 18));
 
           if (isMatch) {
             recognized = true;
@@ -421,106 +421,209 @@ export default function FaceCamera({ currentUser }: Props) {
   // UI
   // =========================
   return (
-    <main className="flex min-h-screen flex-col items-center gap-4 bg-zinc-950 p-4 text-white">
-      <h1 className="text-2xl font-bold">Ishxona Davomat</h1>
-      <p className="text-center text-lg text-emerald-400">{result}</p>
+    <main className="fc-root flex min-h-screen flex-col items-center gap-6 px-4 py-8">
+      <style jsx global>{`
+        @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+        .fc-root {
+          background: radial-gradient(
+            ellipse 120% 80% at 50% -10%,
+            #1a1e24 0%,
+            #0b0d10 55%
+          );
+          color: #edeff2;
+          font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+        }
+        .fc-mono {
+          font-family: "JetBrains Mono", ui-monospace, monospace;
+        }
+        @keyframes fc-scan {
+          0% {
+            transform: translateY(0%);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+        }
+        .fc-scanline {
+          animation: fc-scan 3.2s ease-in-out infinite;
+        }
+        @keyframes fc-pulse {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.35;
+          }
+        }
+        .fc-pulse {
+          animation: fc-pulse 2s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Header */}
+      <header className="flex w-full max-w-[640px] items-center justify-between">
+        <div>
+          <p className="text-lg font-semibold tracking-tight">Davomat</p>
+          <p className="text-sm text-[#8A909B]">
+            Kirish va chiqishni yuz orqali qayd eting
+          </p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full border border-[#2A2F36] bg-[#15181C] px-3 py-1.5">
+          <span
+            className={`h-2 w-2 rounded-full ${
+              modelsLoaded ? "bg-[#3ED598] fc-pulse" : "bg-[#8A909B]"
+            }`}
+          />
+          <span className="fc-mono text-xs text-[#8A909B]">
+            {modelsLoaded ? "tayyor" : "yuklanmoqda"}
+          </span>
+        </div>
+      </header>
+
+      {/* Status readout */}
+      <div className="w-full max-w-[640px] rounded-2xl border border-[#2A2F36] bg-[#15181C] px-5 py-4">
+        <p className="fc-mono text-[15px] leading-relaxed text-[#3ED598]">
+          {result}
+        </p>
+      </div>
 
       {/* Bugungi holat */}
       {todayRecord && (
-        <div className="rounded-lg bg-zinc-800 px-4 py-2 text-sm">
-          Bugun: <b>{todayRecord.check_in}</b>
-          {todayRecord.check_out
-            ? ` → ${todayRecord.check_out}`
-            : " (hali ketmagan)"}
+        <div className="flex w-full max-w-[640px] items-center justify-between rounded-2xl border border-dashed border-[#2A2F36] bg-[#0F1216] px-5 py-3">
+          <div className="flex items-center gap-3 fc-mono text-sm">
+            <span className="text-[#8A909B]">Bugun</span>
+            <span className="font-medium text-[#EDEFF2]">
+              {todayRecord.check_in}
+            </span>
+            <span className="text-[#4A505A]">→</span>
+            <span className="font-medium text-[#EDEFF2]">
+              {todayRecord.check_out || "hali ketmagan"}
+            </span>
+          </div>
           {todayRecord.fine > 0 && (
-            <span className="ml-2 text-red-400">
-              Jarima: {todayRecord.fine} so'm
+            <span className="fc-mono rounded-full bg-[#F0665A]/10 px-3 py-1 text-xs font-medium text-[#F0665A]">
+              {todayRecord.fine} so'm jarima
             </span>
           )}
         </div>
       )}
 
-      <div className="relative w-full max-w-[640px] overflow-hidden rounded-xl border border-zinc-700">
+      {/* Camera frame */}
+      <div className="relative w-full max-w-[640px] overflow-hidden rounded-2xl border border-[#2A2F36] bg-black">
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
           onPlay={handleVideoPlay}
-          className="block h-auto w-full"
+          className="block h-auto w-full opacity-95"
         />
         <canvas
           ref={canvasRef}
           className="pointer-events-none absolute left-0 top-0 h-full w-full"
         />
+
+        {/* corner brackets */}
+        <div className="pointer-events-none absolute inset-3">
+          <span className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-[#C9963E]/70" />
+          <span className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-[#C9963E]/70" />
+          <span className="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-[#C9963E]/70" />
+          <span className="absolute bottom-0 right-0 h-6 w-6 border-b-2 border-r-2 border-[#C9963E]/70" />
+        </div>
+
+        {/* scan line, only while waiting for a match */}
+        {!needFaceRegistration && myFace && (
+          <div className="pointer-events-none absolute inset-x-3 top-3 bottom-3 overflow-hidden">
+            <div className="fc-scanline h-px w-full bg-gradient-to-r from-transparent via-[#C9963E] to-transparent" />
+          </div>
+        )}
       </div>
 
       {needFaceRegistration ? (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-center text-amber-400">
-            Birinchi marta tizimga kirdingiz.
-            <br />
-            Yuzingizni ro‘yxatdan o‘tkazing.
+        <div className="flex w-full max-w-[640px] flex-col items-center gap-4 rounded-2xl border border-[#2A2F36] bg-[#15181C] px-6 py-6 text-center">
+          <p className="text-[#C9963E]">
+            Birinchi marta tizimga kirdingiz. Yuzingizni ro'yxatdan o'tkazing.
           </p>
           <button
             onClick={saveMyFace}
             disabled={!modelsLoaded || saving}
-            className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-full bg-[#C9963E] px-6 py-3 font-semibold text-[#0B0D10] transition-colors hover:bg-[#DBA84E] disabled:opacity-40"
           >
             {saving ? "Saqlanmoqda..." : "Yuzimni saqlash"}
           </button>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-sm text-zinc-400">
-            Kameraga qarang — avtomatik check-in / check-out
+        <div className="flex w-full max-w-[640px] items-center justify-between">
+          <p className="text-sm text-[#8A909B]">
+            Kameraga qarang — kirish va chiqish avtomatik qayd etiladi
           </p>
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="rounded-lg bg-zinc-700 px-4 py-2 text-sm hover:bg-zinc-600"
+            className="whitespace-nowrap rounded-full border border-[#2A2F36] bg-[#15181C] px-4 py-2 text-sm text-[#EDEFF2] transition-colors hover:border-[#C9963E]/60"
           >
-            {showHistory ? "Kamerani ko‘rsatish" : "Mening tarixim"}
+            {showHistory ? "Kamerani ko'rsatish" : "Mening tarixim"}
           </button>
         </div>
       )}
 
       {myFace && (
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex w-full max-w-[640px] items-center gap-3 rounded-2xl border border-[#2A2F36] bg-[#15181C] px-4 py-3">
           <img
             src={myFace.image}
             alt={myFace.name}
-            className="h-16 w-16 rounded-full border-2 border-emerald-500 object-cover"
+            className="h-12 w-12 rounded-full border-2 border-[#3ED598] object-cover"
           />
-          <p className="text-sm">{myFace.name}</p>
+          <div>
+            <p className="text-sm font-medium">{myFace.name}</p>
+            <p className="fc-mono text-xs text-[#8A909B]">
+              ID {myFace.worker_id}
+            </p>
+          </div>
         </div>
       )}
 
       {/* O'z tarixi */}
       {showHistory && (
-        <div className="mt-4 w-full max-w-lg overflow-x-auto rounded-xl border border-zinc-700">
+        <div className="w-full max-w-[640px] overflow-hidden rounded-2xl border border-[#2A2F36] bg-[#15181C]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-zinc-800">
-              <tr>
-                <th className="p-3">Sana</th>
-                <th className="p-3">Kelish</th>
-                <th className="p-3">Chiqish</th>
-                <th className="p-3">Jarima</th>
+            <thead>
+              <tr className="border-b border-[#2A2F36] text-[#8A909B]">
+                <th className="px-4 py-3 font-medium">Sana</th>
+                <th className="px-4 py-3 font-medium">Kelish</th>
+                <th className="px-4 py-3 font-medium">Chiqish</th>
+                <th className="px-4 py-3 text-right font-medium">Jarima</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="fc-mono">
               {myHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-4 text-center text-zinc-500">
-                    Hali yozuv yo‘q
+                  <td
+                    colSpan={4}
+                    className="px-4 py-6 text-center text-[#8A909B]"
+                  >
+                    Hali yozuv yo'q
                   </td>
                 </tr>
               ) : (
                 [...myHistory].reverse().map((a) => (
-                  <tr key={a.id} className="border-t border-zinc-800">
-                    <td className="p-3">{a.date}</td>
-                    <td className="p-3">{a.check_in}</td>
-                    <td className="p-3">{a.check_out || "—"}</td>
-                    <td className="p-3 text-red-400">
+                  <tr
+                    key={a.id}
+                    className="border-b border-[#1E2126] last:border-b-0"
+                  >
+                    <td className="px-4 py-3 text-[#8A909B]">{a.date}</td>
+                    <td className="px-4 py-3">{a.check_in}</td>
+                    <td className="px-4 py-3">{a.check_out || "—"}</td>
+                    <td className="px-4 py-3 text-right text-[#F0665A]">
                       {a.fine > 0 ? `${a.fine} so'm` : "—"}
                     </td>
                   </tr>
