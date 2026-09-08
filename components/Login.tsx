@@ -83,6 +83,14 @@ export default function Login({ onLoginSuccess }: Props) {
       }
 
       const user = { ...data[0], role };
+      // Admin bo'lsa to'g'ridan-to'g'ri kiradi
+      if (role === "admin") {
+        localStorage.setItem("user", JSON.stringify(user));
+        onLoginSuccess(user);
+        return;
+      }
+
+      // Ishchi bo'lsa yuz tekshirishga o'tadi
       setTempUser(user);
       setStep("face");
     } catch {
