@@ -8,10 +8,9 @@ export default function AdminDashboard() {
   const [attendance, setAttendance] = useState<any[]>([]);
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [adding, setAdding] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "today" | "workers" | "history"
+    "overview" | "today" | "workers" | "add-worker" | "history"
   >("overview");
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7) // "2026-09"
@@ -82,7 +81,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ ...newWorker, salary: 0 }),
       });
       if (res.ok) {
-        alert("Xodim qo‘shildi");
+        alert("Xodim muvaffaqiyatli qo‘shildi");
         setNewWorker({
           name: "",
           position: "",
@@ -91,8 +90,8 @@ export default function AdminDashboard() {
           username: "",
           password: "",
         });
-        setShowAddForm(false);
         await loadData();
+        setActiveTab("workers"); // Qo'shilgandan so'ng xodimlar ro'yxatiga o'tadi
       } else {
         alert("Xatolik");
       }
@@ -192,7 +191,17 @@ export default function AdminDashboard() {
                 : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
             }`}
           >
-            <span>👥</span> Xodimlar
+            <span>👥</span> Xodimlar ro'yxati
+          </button>
+          <button
+            onClick={() => setActiveTab("add-worker")}
+            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              activeTab === "add-worker"
+                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+            }`}
+          >
+            <span>➕</span> Yangi xodim qo'shish
           </button>
           <button
             onClick={() => setActiveTab("history")}
@@ -257,6 +266,16 @@ export default function AdminDashboard() {
                 Xodimlar
               </button>
               <button
+                onClick={() => setActiveTab("add-worker")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                  activeTab === "add-worker"
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-zinc-800 text-zinc-400"
+                }`}
+              >
+                + Qo'shish
+              </button>
+              <button
                 onClick={() => setActiveTab("history")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
                   activeTab === "history"
@@ -271,113 +290,141 @@ export default function AdminDashboard() {
               {activeTab === "overview" && "Umumiy ko'rinish"}
               {activeTab === "today" && "Bugungi davomat"}
               {activeTab === "workers" && "Xodimlar ro'yxati"}
+              {activeTab === "add-worker" && "Yangi xodim qo'shish"}
               {activeTab === "history" && "Oylik hisobotlar"}
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
-            >
-              <span>+</span>{" "}
-              <span className="hidden sm:inline">Yangi xodim</span>
-            </button>
-            <button
-              onClick={loadData}
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-700 bg-zinc-900/80 px-3.5 py-2 text-sm font-medium text-zinc-300 shadow-sm transition-all hover:bg-zinc-800 hover:text-white"
-            >
-              🔄
-            </button>
-          </div>
+          <button
+            onClick={loadData}
+            className="inline-flex items-center gap-2 justify-center rounded-xl border border-zinc-700 bg-zinc-900/80 px-3.5 py-2 text-sm font-medium text-zinc-300 shadow-sm transition-all hover:bg-zinc-800 hover:text-white"
+          >
+            🔄 Yangilash
+          </button>
         </header>
 
         <div className="p-6 space-y-8 flex-1 overflow-y-auto">
-          {/* Yangi xodim formasi */}
-          {showAddForm && (
-            <form
-              onSubmit={handleAddWorker}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 backdrop-blur-sm shadow-xl transition-all"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                  Yangi xodim biriktirish
+          {/* Tab: Yangi xodim qo'shish (Alohida vkladka) */}
+          {activeTab === "add-worker" && (
+            <div className="max-w-4xl mx-auto rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 sm:p-8 backdrop-blur-sm shadow-xl">
+              <div className="mb-6 border-b border-zinc-800/80 pb-4">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                  Yangi xodim ma'lumotlarini kiriting
                 </h2>
-                <button
-                  type="button"
-                  onClick={() => setShowAddForm(false)}
-                  className="text-zinc-500 hover:text-zinc-300 text-sm"
-                >
-                  ✕ Yopish
-                </button>
+                <p className="text-sm text-zinc-400 mt-1">
+                  Xodimlarni tizimga kiritish va ularga shaxsiy hisob yaratish
+                  paneli
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <input
-                  placeholder="To‘liq ism *"
-                  value={newWorker.name}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, name: e.target.value })
-                  }
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  required
-                />
-                <input
-                  placeholder="Lavozim"
-                  value={newWorker.position}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, position: e.target.value })
-                  }
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-                <input
-                  placeholder="Bo‘lim"
-                  value={newWorker.department}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, department: e.target.value })
-                  }
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-                <input
-                  placeholder="Telefon"
-                  value={newWorker.phone}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, phone: e.target.value })
-                  }
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                />
-                <input
-                  placeholder="Login *"
-                  value={newWorker.username}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, username: e.target.value })
-                  }
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  required
-                />
-                <input
-                  placeholder="Parol *"
-                  type="password"
-                  value={newWorker.password}
-                  onChange={(e) =>
-                    setNewWorker({ ...newWorker, password: e.target.value })
-                  }
-                  className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  required
-                />
-              </div>
+              <form onSubmit={handleAddWorker} className="space-y-6">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                      To'liq ism *
+                    </label>
+                    <input
+                      placeholder="Masalan: Ali Valiyev"
+                      value={newWorker.name}
+                      onChange={(e) =>
+                        setNewWorker({ ...newWorker, name: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                      Lavozim
+                    </label>
+                    <input
+                      placeholder="Masalan: Dasturchi"
+                      value={newWorker.position}
+                      onChange={(e) =>
+                        setNewWorker({ ...newWorker, position: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                      Bo'lim
+                    </label>
+                    <input
+                      placeholder="Masalan: IT Bo'limi"
+                      value={newWorker.department}
+                      onChange={(e) =>
+                        setNewWorker({
+                          ...newWorker,
+                          department: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                      Telefon raqam
+                    </label>
+                    <input
+                      placeholder="Masalan: +998 90 123 45 67"
+                      value={newWorker.phone}
+                      onChange={(e) =>
+                        setNewWorker({ ...newWorker, phone: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                      Login (Username) *
+                    </label>
+                    <input
+                      placeholder="Foydalanuvchi logini"
+                      value={newWorker.username}
+                      onChange={(e) =>
+                        setNewWorker({ ...newWorker, username: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                      Parol *
+                    </label>
+                    <input
+                      placeholder="••••••••"
+                      type="password"
+                      value={newWorker.password}
+                      onChange={(e) =>
+                        setNewWorker({ ...newWorker, password: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+                </div>
 
-              <div className="mt-5 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={adding}
-                  className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-50"
-                >
-                  {adding ? "Saqlanmoqda..." : "Saqlash"}
-                </button>
-              </div>
-            </form>
+                <div className="pt-4 flex justify-end gap-3 border-t border-zinc-800/80">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("workers")}
+                    className="rounded-xl border border-zinc-800 px-5 py-2.5 text-sm font-medium text-zinc-400 hover:bg-zinc-800 hover:text-white transition-all"
+                  >
+                    Bekor qilish
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={adding}
+                    className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    {adding ? "Saqlanmoqda..." : "Xodimlarga qo'shish"}
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
 
           {/* Tab 1: Overview */}
@@ -504,9 +551,19 @@ export default function AdminDashboard() {
           {/* Tab 2: Workers */}
           {(activeTab === "overview" || activeTab === "workers") && (
             <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-5">
-              <h2 className="mb-4 text-lg font-semibold text-white">
-                Xodimlar ro‘yxati
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white">
+                  Xodimlar ro‘yxati
+                </h2>
+                {activeTab === "workers" && (
+                  <button
+                    onClick={() => setActiveTab("add-worker")}
+                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 transition-all"
+                  >
+                    + Yangi xodim qo'shish
+                  </button>
+                )}
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-zinc-800 text-xs uppercase tracking-wider text-zinc-400">
