@@ -11,7 +11,7 @@ import {
   saveSkins,
 } from "@/lib/skins";
 import { type SyncConfig, loadSyncConfig, pullSkins, pushSkins, randomCode, saveSyncConfig } from "@/lib/sync";
-import { getApiKey, scanImage, setApiKey } from "@/lib/scan";
+import { type Provider, type ScanSettings, DEFAULT_GROQ_MODEL, loadScanSettings, saveScanSettings, scanImage } from "@/lib/scan";
 import { cropThumb, prepareImage } from "@/lib/image";
 import { type UpdateInfo, BUILD_ID, checkUpdate } from "@/lib/update";
 
@@ -40,7 +40,7 @@ export default function SkinsApp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showKey, setShowKey] = useState(false);
-  const [keyInput, setKeyInput] = useState("");
+  const [scan, setScan] = useState<ScanSettings>({ provider: "claude", claudeKey: "", groqKey: "", groqModel: DEFAULT_GROQ_MODEL });
   const [cfg, setCfg] = useState<SyncConfig>({ url: "", anonKey: "", code: "" });
   const [syncMsg, setSyncMsg] = useState("");
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
@@ -57,7 +57,7 @@ export default function SkinsApp() {
 
   useEffect(() => {
     setSkins(loadSkins());
-    setKeyInput(getApiKey());
+    setScan(loadScanSettings());
     const c = loadSyncConfig();
     setCfg(c);
     setReady(true);
@@ -229,13 +229,28 @@ export default function SkinsApp() {
       {showKey && (
         <div className="mb-4 rounded-xl bg-zinc-900 p-4">
           <p className="mb-3 text-xs text-zinc-500">Versiya: {BUILD_ID.slice(0, 7)}</p>
-          <p className="mb-2 text-sm text-zinc-400">Anthropic API kalit (faqat shu qurilmada saqlanadi)</p>
-          <div className="flex gap-2">
-            <input type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="sk-ant-..." className="min-w-0 flex-1 rounded bg-zinc-800 p-2 text-sm" />
-            <button onClick={() => { setApiKey(keyInput); setShowKey(false); }}
-              className="rounded bg-amber-500 px-4 text-sm font-semibold text-black">Saqlash</button>
+          <p className="mb-2 text-sm text-zinc-400">Rasm o&apos;qish uchun AI (faqat shu qurilmada saqlanadi)</p>
+          <div className="mb-2 flex gap-1 rounded-lg bg-zinc-800 p-1 text-sm">
+            {(["claude", "groq"] as Provider[]).map((p) => (
+              <button key={p} onClick={() => setScan({ ...scan, provider: p })}
+                className={`flex-1 rounded-md py-1.5 ${scan.provider === p ? "bg-amber-500 font-semibold text-black" : "text-zinc-400"}`}>
+                {p === "claude" ? "Claude (aniqroq)" : "Groq (bepul)"}
+              </button>
+            ))}
           </div>
+          {scan.provider === "claude" ? (
+            <input type="password" value={scan.claudeKey} onChange={(e) => setScan({ ...scan, claudeKey: e.target.value })}
+              placeholder="Anthropic key: sk-ant-..." className="w-full rounded bg-zinc-800 p-2 text-sm" />
+          ) : (
+            <div className="space-y-2">
+              <input type="password" value={scan.groqKey} onChange={(e) => setScan({ ...scan, groqKey: e.target.value })}
+                placeholder="Groq key: gsk_..." className="w-full rounded bg-zinc-800 p-2 text-sm" />
+              <input value={scan.groqModel} onChange={(e) => setScan({ ...scan, groqModel: e.target.value })}
+                placeholder="Model" className="w-full rounded bg-zinc-800 p-2 text-xs" />
+            </div>
+          )}
+          <button onClick={() => { saveScanSettings(scan); setSyncMsg("✔ AI sozlamalari saqlandi"); }}
+            className="mt-2 w-full rounded bg-amber-500 py-2 text-sm font-semibold text-black">Saqlash</button>
 
           <p className="mb-2 mt-5 text-sm text-zinc-400">Bulut sinxronlash (Supabase)</p>
           <div className="space-y-2">
