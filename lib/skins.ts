@@ -3,12 +3,14 @@ export type Skin = {
   weapon: string; // masalan: AKR
   name: string; // masalan: Fire Drake
   price: number; // marketplace narxi (gold)
+  image?: string; // kichik rasm (data URL), skrinshotdan saqlanadi
 };
 
 export type ScannedItem = {
   weapon: string;
   name: string;
   count: number;
+  box?: [number, number, number, number]; // [x, y, w, h], 0..1 nisbatda
 };
 
 export const STORAGE_KEY = "so2_skins_v1";

@@ -11,10 +11,11 @@ export const setApiKey = (k: string) => {
 
 const PROMPT = `Bu Standoff 2 o'yinining inventar (inventory) skrinshoti.
 Undagi har bir ko'rinib turgan skin/predmetni o'qib chiq. Faqat JSON massiv qaytar, boshqa matn yozma:
-[{"weapon":"AKR","name":"Fire Drake","count":1}]
+[{"weapon":"AKR","name":"Fire Drake","count":1,"box":[0.05,0.10,0.15,0.20]}]
 Qoidalar:
 - "weapon" — qurol nomi (AKR, M4, AWM, Karambit, ...), "name" — skin nomi.
 - "count" — agar katakda "x2" kabi miqdor ko'rsatilgan bo'lsa shu son, aks holda 1.
+- "box" — shu katak (rasm + yozuv) joylashgan to'rtburchak: [x, y, kenglik, balandlik], rasmning chap-yuqori burchagiga nisbatan 0 dan 1 gacha kasr sifatida.
 - Faqat aniq o'qiy olgan predmetlarni qo'sh, taxmin qilma. Stiker, charm, graffiti, quti ham bo'lsa, weapon bo'sh qoldirib name'ga nomini yoz.`;
 
 /** Rasmni to'g'ridan-to'g'ri Claude'ga yuboradi (backend kerak emas). */

@@ -12,6 +12,8 @@ import {
 } from "@/lib/skins";
 import { type SyncConfig, loadSyncConfig, pullSkins, pushSkins, randomCode, saveSyncConfig } from "@/lib/sync";
 import { getApiKey, scanImage, setApiKey } from "@/lib/scan";
+import { cropThumb, prepareImage } from "@/lib/image";
+import { type UpdateInfo, BUILD_ID, checkUpdate } from "@/lib/update";
 
 type Row = {
   key: number;
@@ -20,21 +22,14 @@ type Row = {
   count: number;
   candidates: Skin[];
   auto: boolean;
+  thumb: string; // skrinshotdan qirqilgan rasm
+  weapon: string;
+  name: string;
+  price: string; // yangi skin qo'shish uchun
 };
 
 const fmt = (n: number) => n.toLocaleString("ru-RU");
 const label = (s: Skin) => (s.weapon ? `${s.weapon} | ${s.name}` : s.name);
-
-async function fileToBase64(file: File): Promise<{ data: string; type: string }> {
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * scale);
-  c.height = Math.round(bmp.height * scale);
-  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-  const url = c.toDataURL("image/jpeg", 0.9);
-  return { data: url.split(",")[1], type: "image/jpeg" };
-}
 
 export default function SkinsApp() {
   const [skins, setSkins] = useState<Skin[]>([]);
@@ -48,16 +43,73 @@ export default function SkinsApp() {
   const [keyInput, setKeyInput] = useState("");
   const [cfg, setCfg] = useState<SyncConfig>({ url: "", anonKey: "", code: "" });
   const [syncMsg, setSyncMsg] = useState("");
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const fromCloud = useRef(true); // keyingi o'zgarish foydalanuvchidan emas (yuklash/bulut)
+  const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dirty = (v?: boolean) => {
+    try {
+      if (v === undefined) return localStorage.getItem("so2_dirty") === "1";
+      localStorage.setItem("so2_dirty", v ? "1" : "0");
+    } catch {}
+    return !!v;
+  };
 
   useEffect(() => {
     setSkins(loadSkins());
     setKeyInput(getApiKey());
-    setCfg(loadSyncConfig());
+    const c = loadSyncConfig();
+    setCfg(c);
     setReady(true);
+    checkUpdate().then(setUpdate);
+    if (c.code) void syncNow(c, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Har o'zgarishda lokal saqlash; foydalanuvchi o'zgartirsa bulutga avtomatik yuborish
   useEffect(() => {
-    if (ready) saveSkins(skins);
+    if (!ready) return;
+    saveSkins(skins);
+    if (fromCloud.current) {
+      fromCloud.current = false;
+      return;
+    }
+    dirty(true);
+    const c = loadSyncConfig();
+    if (!c.code) return;
+    if (pushTimer.current) clearTimeout(pushTimer.current);
+    pushTimer.current = setTimeout(() => {
+      pushSkins(c, skins)
+        .then(() => { dirty(false); setSyncMsg("✔ Bulutga saqlandi"); })
+        .catch((e) => setSyncMsg("✖ " + (e instanceof Error ? e.message : String(e))));
+    }, 2000);
   }, [skins, ready]);
+
+  /** O'zgarish yo'q bo'lsa buluttan oladi, o'zgarish bor bo'lsa buluttga yuboradi. */
+  async function syncNow(c: SyncConfig, quiet = false) {
+    if (!c.code) return setSyncMsg("Avval ⚙ da sinxron kodni kiriting.");
+    setSyncMsg("🔄 ...");
+    try {
+      const local = loadSkins();
+      if (dirty()) {
+        await pushSkins(c, local);
+        dirty(false);
+        return setSyncMsg("✔ Bulutga saqlandi");
+      }
+      const remote = await pullSkins(c);
+      if (!remote) {
+        if (local.length) await pushSkins(c, local);
+        return setSyncMsg("✔ Bulut bo'sh edi — baza yuklandi");
+      }
+      if (JSON.stringify(remote) !== JSON.stringify(local)) {
+        fromCloud.current = true;
+        setSkins(remote);
+        setSyncMsg(`✔ Yangilandi: ${remote.length} ta skin`);
+      } else setSyncMsg(quiet ? "" : "✔ Hammasi yangi");
+    } catch (e) {
+      setSyncMsg(quiet ? "" : "✖ " + (e instanceof Error ? e.message : String(e)));
+    }
+  }
 
   const byId = useMemo(() => new Map(skins.map((s) => [s.id, s])), [skins]);
   const total = rows.reduce(
@@ -73,20 +125,26 @@ export default function SkinsApp() {
     setRows([]);
     setPreview(URL.createObjectURL(file));
     try {
-      const { data, type } = await fileToBase64(file);
+      const { data, type, bmp } = await prepareImage(file);
       const items: ScannedItem[] = await scanImage(data, type);
       setRows(
         items.map((it, i) => {
-          const m = findMatches(skins, it.weapon ?? "", it.name ?? "");
+          const weapon = it.weapon ?? "";
+          const name = it.name ?? "";
+          const m = findMatches(skins, weapon, name);
           const best = m[0];
           const auto = !!best && best.score >= 0.75;
           return {
             key: i,
-            read: [it.weapon, it.name].filter(Boolean).join(" | "),
+            read: [weapon, name].filter(Boolean).join(" | "),
             skinId: auto ? best.skin.id : "",
             count: Math.max(1, Number(it.count) || 1),
             candidates: m.map((x) => x.skin),
             auto,
+            thumb: cropThumb(bmp, it.box),
+            weapon,
+            name,
+            price: "",
           };
         }),
       );
@@ -97,18 +155,37 @@ export default function SkinsApp() {
     }
   }
 
+  /** Topilmagan skinni skrinshotdagi rasmi bilan bazaga qo'shadi. */
+  function addFromRow(r: Row) {
+    const price = Number(r.price);
+    if (!r.name.trim() || !price) return setError("Skin nomi va narxini kiriting.");
+    setError("");
+    const id = makeId(r.weapon.trim(), r.name.trim());
+    const skin: Skin = { id, weapon: r.weapon.trim(), name: r.name.trim(), price, image: r.thumb || undefined };
+    setSkins((cur) => [...cur.filter((x) => x.id !== id), skin]);
+    setRows((rs) => rs.map((x) => (x.key === r.key ? { ...x, skinId: id, candidates: [skin, ...x.candidates] } : x)));
+  }
+
+  function saveImage(r: Row) {
+    if (!r.thumb) return;
+    setSkins((cur) => cur.map((x) => (x.id === r.skinId ? { ...x, image: r.thumb } : x)));
+  }
+
   async function runSync(kind: "push" | "pull") {
     setSyncMsg("...");
     try {
       saveSyncConfig(cfg);
       if (kind === "push") {
         await pushSkins(cfg, skins);
+        dirty(false);
         setSyncMsg(`✔ ${skins.length} ta skin bulutga yuklandi`);
       } else {
         const remote = await pullSkins(cfg);
         if (!remote) return setSyncMsg("Bulutda baza hali yo'q. Avval boshqa qurilmadan yuklang.");
         if (!confirm(`Buluttagi ${remote.length} ta skin shu qurilmadagi ${skins.length} tasining o'rniga yoziladi. Davom etasizmi?`)) return setSyncMsg("");
+        fromCloud.current = true;
         setSkins(() => remote);
+        dirty(false);
         setSyncMsg(`✔ ${remote.length} ta skin buluttan olindi`);
       }
     } catch (e) {
@@ -121,15 +198,27 @@ export default function SkinsApp() {
 
   return (
     <main className="mx-auto min-h-screen max-w-4xl bg-zinc-950 px-4 py-6 text-zinc-100">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold sm:text-2xl">Standoff 2 — Inventar narxi</h1>
-        <button onClick={() => setShowKey((v) => !v)} className="text-xl" aria-label="Sozlamalar">⚙</button>
+      {update && (
+        <a href={update.url} className="mb-4 block rounded-xl bg-emerald-600 p-3 text-center text-sm font-semibold text-white">
+          ⬇ Yangi versiya bor — yuklab olish uchun bosing
+        </a>
+      )}
+
+      <header className="mb-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold sm:text-2xl">Standoff 2 — Inventar narxi</h1>
+          <div className="flex gap-3 text-xl">
+            <button onClick={() => syncNow(loadSyncConfig())} aria-label="Yangilash">🔄</button>
+            <button onClick={() => setShowKey((v) => !v)} aria-label="Sozlamalar">⚙</button>
+          </div>
+        </div>
+        {syncMsg && <p className="text-xs text-zinc-400">{syncMsg}</p>}
         <nav className="flex gap-1 rounded-lg bg-zinc-900 p-1 text-sm">
           {(["calc", "db"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`rounded-md px-3 py-1.5 ${tab === t ? "bg-amber-500 font-semibold text-black" : "text-zinc-400"}`}
+              className={`flex-1 rounded-md px-3 py-1.5 ${tab === t ? "bg-amber-500 font-semibold text-black" : "text-zinc-400"}`}
             >
               {t === "calc" ? "Hisoblash" : `Skinlar bazasi (${skins.length})`}
             </button>
@@ -139,6 +228,7 @@ export default function SkinsApp() {
 
       {showKey && (
         <div className="mb-4 rounded-xl bg-zinc-900 p-4">
+          <p className="mb-3 text-xs text-zinc-500">Versiya: {BUILD_ID.slice(0, 7)}</p>
           <p className="mb-2 text-sm text-zinc-400">Anthropic API kalit (faqat shu qurilmada saqlanadi)</p>
           <div className="flex gap-2">
             <input type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
@@ -208,48 +298,79 @@ export default function SkinsApp() {
                 {rows.map((r) => {
                   const skin = byId.get(r.skinId);
                   return (
-                    <li key={r.key} className="flex flex-wrap items-center gap-3 p-3">
-                      <div className="min-w-40 flex-1">
-                        <p className="text-xs text-zinc-500">O&apos;qildi: {r.read}</p>
-                        <select
-                          value={r.skinId}
-                          onChange={(e) => patch(r.key, { skinId: e.target.value })}
-                          className={`mt-1 w-full rounded bg-zinc-800 p-1.5 text-sm ${skin ? "" : "ring-1 ring-red-500"}`}
-                        >
-                          <option value="">— topilmadi —</option>
-                          {r.candidates.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {label(c)}
-                            </option>
-                          ))}
-                          {skins
-                            .filter((s) => !r.candidates.some((c) => c.id === s.id))
-                            .map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {label(s)}
+                    <li key={r.key} className="p-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex gap-1">
+                          {r.thumb && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={r.thumb} alt="skrinshotdan" title="Skrinshotdan" className="h-14 w-14 rounded bg-zinc-800 object-contain" />
+                          )}
+                          {skin?.image && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={skin.image} alt="bazadan" title="Bazadan" className="h-14 w-14 rounded bg-zinc-800 object-contain ring-1 ring-emerald-600" />
+                          )}
+                        </div>
+                        <div className="min-w-40 flex-1">
+                          <p className="text-xs text-zinc-500">O&apos;qildi: {r.read}</p>
+                          <select
+                            value={r.skinId}
+                            onChange={(e) => patch(r.key, { skinId: e.target.value })}
+                            className={`mt-1 w-full rounded bg-zinc-800 p-1.5 text-sm ${skin ? "" : "ring-1 ring-red-500"}`}
+                          >
+                            <option value="">— bazada yo&apos;q —</option>
+                            {r.candidates.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {label(c)}
                               </option>
                             ))}
-                        </select>
+                            {skins
+                              .filter((s) => !r.candidates.some((c) => c.id === s.id))
+                              .map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {label(s)}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <input
+                          type="number"
+                          min={1}
+                          value={r.count}
+                          onChange={(e) =>
+                            patch(r.key, { count: Math.max(1, Number(e.target.value) || 1) })
+                          }
+                          className="w-16 rounded bg-zinc-800 p-1.5 text-center text-sm"
+                        />
+                        <span className="w-28 text-right font-semibold text-amber-400">
+                          {skin ? `${fmt(skin.price * r.count)} G` : "—"}
+                        </span>
+                        <button
+                          onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
+                          className="text-zinc-500 hover:text-red-400"
+                          aria-label="O'chirish"
+                        >
+                          ✕
+                        </button>
                       </div>
-                      <input
-                        type="number"
-                        min={1}
-                        value={r.count}
-                        onChange={(e) =>
-                          patch(r.key, { count: Math.max(1, Number(e.target.value) || 1) })
-                        }
-                        className="w-16 rounded bg-zinc-800 p-1.5 text-center text-sm"
-                      />
-                      <span className="w-28 text-right font-semibold text-amber-400">
-                        {skin ? `${fmt(skin.price * r.count)} G` : "—"}
-                      </span>
-                      <button
-                        onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
-                        className="text-zinc-500 hover:text-red-400"
-                        aria-label="O'chirish"
-                      >
-                        ✕
-                      </button>
+
+                      {!skin && (
+                        <div className="mt-2 flex flex-wrap gap-2 rounded-lg bg-zinc-800/60 p-2 text-sm">
+                          <input value={r.weapon} onChange={(e) => patch(r.key, { weapon: e.target.value })}
+                            placeholder="Qurol" className="w-24 rounded bg-zinc-800 p-1.5" />
+                          <input value={r.name} onChange={(e) => patch(r.key, { name: e.target.value })}
+                            placeholder="Skin nomi" className="min-w-28 flex-1 rounded bg-zinc-800 p-1.5" />
+                          <input value={r.price} type="number" onChange={(e) => patch(r.key, { price: e.target.value })}
+                            placeholder="Narx (G)" className="w-24 rounded bg-zinc-800 p-1.5" />
+                          <button onClick={() => addFromRow(r)} className="rounded bg-amber-500 px-3 font-semibold text-black">
+                            ＋ Bazaga qo&apos;shish
+                          </button>
+                        </div>
+                      )}
+                      {skin && !skin.image && r.thumb && (
+                        <button onClick={() => saveImage(r)} className="mt-2 text-xs text-amber-400">
+                          📷 Skrinshotdagi rasmni bazaga saqlash
+                        </button>
+                      )}
                     </li>
                   );
                 })}
@@ -283,7 +404,7 @@ function SkinDb({
       const map = new Map(cur.map((s) => [s.id, s]));
       for (const it of items) {
         const id = makeId(it.weapon, it.name);
-        map.set(id, { ...it, id });
+        map.set(id, { ...map.get(id), ...it, id });
       }
       return [...map.values()];
     });
@@ -368,6 +489,12 @@ function SkinDb({
         <ul className="max-h-[28rem] divide-y divide-zinc-800 overflow-y-auto rounded-xl bg-zinc-900">
           {shown.map((s) => (
             <li key={s.id} className="flex items-center gap-3 p-2.5 text-sm">
+              {s.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.image} alt="" className="h-9 w-9 rounded bg-zinc-800 object-contain" />
+              ) : (
+                <span className="h-9 w-9 rounded bg-zinc-800" />
+              )}
               <span className="flex-1">{label(s)}</span>
               <input type="number" value={s.price}
                 onChange={(e) => setSkins((cur) => cur.map((x) => x.id === s.id ? { ...x, price: Number(e.target.value) || 0 } : x))}

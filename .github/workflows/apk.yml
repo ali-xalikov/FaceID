@@ -4,9 +4,15 @@ on:
     branches: [claude/standoff2-marketplace-skin-app-dx9bnj]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_BUILD_ID: ${{ github.sha }}
+      BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,3 +27,11 @@ jobs:
         with:
           name: so2-inventar-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+      # Ilovaning o'zi shu release'dan yangi versiyani tekshiradi
+      - name: Publish release "latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk so2-inventar.apk
+          gh release delete latest --cleanup-tag -y || true
+          gh release create latest so2-inventar.apk --title "Oxirgi versiya" --notes "${{ github.sha }}" --target "${{ github.sha }}"
