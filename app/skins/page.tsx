@@ -10,6 +10,7 @@ import {
   parseBulk,
   saveSkins,
 } from "@/lib/skins";
+import { type SyncConfig, loadSyncConfig, pullSkins, pushSkins, randomCode, saveSyncConfig } from "@/lib/sync";
 import { getApiKey, scanImage, setApiKey } from "@/lib/scan";
 
 type Row = {
@@ -45,10 +46,13 @@ export default function SkinsPage() {
   const [error, setError] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
+  const [cfg, setCfg] = useState<SyncConfig>({ projectId: "", apiKey: "", code: "" });
+  const [syncMsg, setSyncMsg] = useState("");
 
   useEffect(() => {
     setSkins(loadSkins());
     setKeyInput(getApiKey());
+    setCfg(loadSyncConfig());
     setReady(true);
   }, []);
   useEffect(() => {
@@ -93,6 +97,25 @@ export default function SkinsPage() {
     }
   }
 
+  async function runSync(kind: "push" | "pull") {
+    setSyncMsg("...");
+    try {
+      saveSyncConfig(cfg);
+      if (kind === "push") {
+        await pushSkins(cfg, skins);
+        setSyncMsg(`✔ ${skins.length} ta skin bulutga yuklandi`);
+      } else {
+        const remote = await pullSkins(cfg);
+        if (!remote) return setSyncMsg("Bulutda baza hali yo'q. Avval boshqa qurilmadan yuklang.");
+        if (!confirm(`Buluttagi ${remote.length} ta skin shu qurilmadagi ${skins.length} tasining o'rniga yoziladi. Davom etasizmi?`)) return setSyncMsg("");
+        setSkins(() => remote);
+        setSyncMsg(`✔ ${remote.length} ta skin buluttan olindi`);
+      }
+    } catch (e) {
+      setSyncMsg("✖ " + (e instanceof Error ? e.message : String(e)));
+    }
+  }
+
   const patch = (key: number, p: Partial<Row>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...p, auto: false } : r)));
 
@@ -122,6 +145,24 @@ export default function SkinsPage() {
               placeholder="sk-ant-..." className="min-w-0 flex-1 rounded bg-zinc-800 p-2 text-sm" />
             <button onClick={() => { setApiKey(keyInput); setShowKey(false); }}
               className="rounded bg-amber-500 px-4 text-sm font-semibold text-black">Saqlash</button>
+          </div>
+
+          <p className="mb-2 mt-5 text-sm text-zinc-400">Bulut sinxronlash (Firebase Firestore)</p>
+          <div className="space-y-2">
+            <input value={cfg.projectId} onChange={(e) => setCfg({ ...cfg, projectId: e.target.value.trim() })}
+              placeholder="Firebase Project ID" className="w-full rounded bg-zinc-800 p-2 text-sm" />
+            <input value={cfg.apiKey} onChange={(e) => setCfg({ ...cfg, apiKey: e.target.value.trim() })}
+              placeholder="Firebase Web API key" className="w-full rounded bg-zinc-800 p-2 text-sm" />
+            <div className="flex gap-2">
+              <input value={cfg.code} onChange={(e) => setCfg({ ...cfg, code: e.target.value.trim() })}
+                placeholder="Sinxron kod (barcha qurilmada bir xil)" className="min-w-0 flex-1 rounded bg-zinc-800 p-2 text-sm" />
+              <button onClick={() => setCfg({ ...cfg, code: randomCode() })} className="rounded bg-zinc-800 px-3 text-sm">Yangi kod</button>
+            </div>
+            <div className="flex gap-2 text-sm">
+              <button onClick={() => runSync("push")} className="flex-1 rounded bg-amber-500 py-2 font-semibold text-black">⬆ Bulutga yuklash</button>
+              <button onClick={() => runSync("pull")} className="flex-1 rounded bg-zinc-800 py-2">⬇ Buluttan olish</button>
+            </div>
+            {syncMsg && <p className="text-sm text-zinc-300">{syncMsg}</p>}
           </div>
         </div>
       )}
