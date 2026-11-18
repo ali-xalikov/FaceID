@@ -29,3 +29,9 @@ export function cropThumb(bmp: ImageBitmap, box?: number[]): string {
   g.drawImage(bmp, x, y, w, h, (S - w * k) / 2, (S - h * k) / 2, w * k, h * k);
   return c.toDataURL("image/jpeg", 0.6);
 }
+
+/** Galereyadan tanlangan rasmni kichik (80x80) rasmga aylantiradi. */
+export async function fileThumb(file: File): Promise<string> {
+  const bmp = await createImageBitmap(file);
+  return cropThumb(bmp, [0, 0, 1, 1]);
+}

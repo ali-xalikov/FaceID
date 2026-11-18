@@ -12,7 +12,7 @@ import {
 } from "@/lib/skins";
 import { type SyncConfig, loadSyncConfig, pullSkins, pushSkins, randomCode, saveSyncConfig } from "@/lib/sync";
 import { type Provider, type ScanSettings, DEFAULT_GROQ_MODEL, loadScanSettings, saveScanSettings, scanImage } from "@/lib/scan";
-import { cropThumb, prepareImage } from "@/lib/image";
+import { cropThumb, fileThumb, prepareImage } from "@/lib/image";
 import { type UpdateInfo, BUILD_ID, checkUpdate } from "@/lib/update";
 
 type Row = {
@@ -410,6 +410,7 @@ function SkinDb({
   const [q, setQ] = useState("");
   const [bulk, setBulk] = useState("");
   const [form, setForm] = useState({ weapon: "", name: "", price: "" });
+  const [formImg, setFormImg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const shown = skins.filter((s) => label(s).toLowerCase().includes(q.toLowerCase()));
@@ -439,12 +440,27 @@ function SkinDb({
           <input placeholder="Narx (gold)" type="number" value={form.price}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
             className="w-32 rounded bg-zinc-800 p-2 text-sm" />
+          <label className="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded bg-zinc-800" title="Rasm (ixtiyoriy)">
+            {formImg ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={formImg} alt="" className="h-full w-full object-contain" />
+            ) : (
+              "📷"
+            )}
+            <input type="file" accept="image/*" className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) setFormImg(await fileThumb(f));
+              }} />
+          </label>
           <button
             onClick={() => {
               const price = Number(form.price);
               if (!form.name.trim() || !price) return;
-              upsert([{ weapon: form.weapon.trim(), name: form.name.trim(), price }]);
+              upsert([{ weapon: form.weapon.trim(), name: form.name.trim(), price, ...(formImg ? { image: formImg } : {}) }]);
               setForm({ weapon: form.weapon, name: "", price: "" });
+              setFormImg("");
             }}
             className="rounded bg-amber-500 px-4 text-sm font-semibold text-black"
           >
@@ -504,12 +520,22 @@ function SkinDb({
         <ul className="max-h-[28rem] divide-y divide-zinc-800 overflow-y-auto rounded-xl bg-zinc-900">
           {shown.map((s) => (
             <li key={s.id} className="flex items-center gap-3 p-2.5 text-sm">
-              {s.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.image} alt="" className="h-9 w-9 rounded bg-zinc-800 object-contain" />
-              ) : (
-                <span className="h-9 w-9 rounded bg-zinc-800" />
-              )}
+              <label className="cursor-pointer" title="Rasm qo'yish">
+                {s.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.image} alt="" className="h-9 w-9 rounded bg-zinc-800 object-contain" />
+                ) : (
+                  <span className="flex h-9 w-9 items-center justify-center rounded bg-zinc-800 text-zinc-500">📷</span>
+                )}
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    const image = await fileThumb(f);
+                    if (image) setSkins((cur) => cur.map((x) => (x.id === s.id ? { ...x, image } : x)));
+                  }} />
+              </label>
               <span className="flex-1">{label(s)}</span>
               <input type="number" value={s.price}
                 onChange={(e) => setSkins((cur) => cur.map((x) => x.id === s.id ? { ...x, price: Number(e.target.value) || 0 } : x))}
