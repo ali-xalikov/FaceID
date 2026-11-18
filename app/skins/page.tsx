@@ -46,7 +46,7 @@ export default function SkinsPage() {
   const [error, setError] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
-  const [cfg, setCfg] = useState<SyncConfig>({ projectId: "", apiKey: "", code: "" });
+  const [cfg, setCfg] = useState<SyncConfig>({ url: "", anonKey: "", code: "" });
   const [syncMsg, setSyncMsg] = useState("");
 
   useEffect(() => {
@@ -147,12 +147,12 @@ export default function SkinsPage() {
               className="rounded bg-amber-500 px-4 text-sm font-semibold text-black">Saqlash</button>
           </div>
 
-          <p className="mb-2 mt-5 text-sm text-zinc-400">Bulut sinxronlash (Firebase Firestore)</p>
+          <p className="mb-2 mt-5 text-sm text-zinc-400">Bulut sinxronlash (Supabase)</p>
           <div className="space-y-2">
-            <input value={cfg.projectId} onChange={(e) => setCfg({ ...cfg, projectId: e.target.value.trim() })}
-              placeholder="Firebase Project ID" className="w-full rounded bg-zinc-800 p-2 text-sm" />
-            <input value={cfg.apiKey} onChange={(e) => setCfg({ ...cfg, apiKey: e.target.value.trim() })}
-              placeholder="Firebase Web API key" className="w-full rounded bg-zinc-800 p-2 text-sm" />
+            <input value={cfg.url} onChange={(e) => setCfg({ ...cfg, url: e.target.value.trim() })}
+              placeholder="Supabase Project URL (https://xxxx.supabase.co)" className="w-full rounded bg-zinc-800 p-2 text-sm" />
+            <input value={cfg.anonKey} onChange={(e) => setCfg({ ...cfg, anonKey: e.target.value.trim() })}
+              placeholder="Supabase anon (public) key" className="w-full rounded bg-zinc-800 p-2 text-sm" />
             <div className="flex gap-2">
               <input value={cfg.code} onChange={(e) => setCfg({ ...cfg, code: e.target.value.trim() })}
                 placeholder="Sinxron kod (barcha qurilmada bir xil)" className="min-w-0 flex-1 rounded bg-zinc-800 p-2 text-sm" />
