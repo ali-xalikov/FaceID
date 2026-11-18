@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "build:app": "next build && node scripts/prepare-app.mjs && cap sync android"
+    "build:app": "NEXT_PUBLIC_APP_MODE=skins next build && node scripts/prepare-app.mjs && cap sync android"
   },
   "dependencies": {
     "@capacitor/core": "^8.6.2",

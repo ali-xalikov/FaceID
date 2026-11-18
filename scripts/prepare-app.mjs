@@ -1,5 +1,5 @@
 // out/ -> www/ ; Android "_" bilan boshlanadigan papkalarni tashlab yuboradi,
-// shuning uchun _next -> nextassets deb qayta nomlanadi. Ilova /skins/ dan boshlanadi.
+// shuning uchun _next -> nextassets deb qayta nomlanadi. Ilova bosh sahifada (/) ochiladi.
 import { cpSync, rmSync, writeFileSync, renameSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -19,8 +19,3 @@ function walk(dir) {
   }
 }
 walk("www");
-
-writeFileSync(
-  "www/index.html",
-  '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=/skins/"><body style="background:#09090b">',
-);
