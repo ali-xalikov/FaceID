@@ -4,12 +4,20 @@ export type SyncConfig = { url: string; anonKey: string; code: string };
 
 const CFG_KEY = "so2_sync_supabase";
 
+// Ochiq (public) anon kalit — xavfsizlik SQL funksiyalar va RLS orqali ta'minlangan.
+const DEFAULT_CFG: SyncConfig = {
+  url: "https://gvvueaqwwowvovjhemcb.supabase.co",
+  anonKey:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dnVlYXF3d293dm92amhlbWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwMjI4NTksImV4cCI6MjExMDU5ODg1OX0.cS7WMxQLH6Jjlkl49PInORDsE1g2ZLmw05C7-7d2Zgw",
+  code: "",
+};
+
 export function loadSyncConfig(): SyncConfig {
   try {
     const raw = localStorage.getItem(CFG_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return { ...DEFAULT_CFG, ...JSON.parse(raw) };
   } catch {}
-  return { url: "", anonKey: "", code: "" };
+  return DEFAULT_CFG;
 }
 export function saveSyncConfig(c: SyncConfig) {
   try { localStorage.setItem(CFG_KEY, JSON.stringify(c)); } catch {}
