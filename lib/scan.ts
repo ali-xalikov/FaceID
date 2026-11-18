@@ -3,7 +3,8 @@ import type { ScannedItem } from "@/lib/skins";
 const KEY_STORAGE = "so2_api_key";
 
 export type Provider = "claude" | "groq";
-export const DEFAULT_GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+export const DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b";
+const OLD_GROQ_MODELS = ["meta-llama/llama-4-scout-17b-16e-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct"];
 
 const lsGet = (k: string, d = "") => {
   try { return localStorage.getItem(k) ?? d; } catch { return d; }
@@ -17,7 +18,10 @@ export const loadScanSettings = (): ScanSettings => ({
   provider: lsGet("so2_provider", "claude") === "groq" ? "groq" : "claude",
   claudeKey: lsGet(KEY_STORAGE),
   groqKey: lsGet("so2_groq_key"),
-  groqModel: lsGet("so2_groq_model", DEFAULT_GROQ_MODEL) || DEFAULT_GROQ_MODEL,
+  groqModel: (() => {
+    const m = lsGet("so2_groq_model", DEFAULT_GROQ_MODEL);
+    return !m || OLD_GROQ_MODELS.includes(m) ? DEFAULT_GROQ_MODEL : m; // o'chirilgan modellarni almashtiradi
+  })(),
 });
 export const saveScanSettings = (c: ScanSettings) => {
   lsSet("so2_provider", c.provider);
@@ -36,13 +40,15 @@ export const setApiKey = (k: string) => {
 const PROMPT = `Bu Standoff 2 o'yinining inventar (inventory) skrinshoti.
 Undagi har bir ko'rinib turgan skin/predmetni o'qib chiq. Faqat JSON massiv qaytar, boshqa matn yozma:
 [{"weapon":"AKR","name":"Fire Drake","count":1,"box":[0.05,0.10,0.15,0.20]}]
+Inventarda nomlar odatda shunday yoziladi: Butterfly "Starfall", M4A1 "Lincoln", AKR "Tag King" — ya'ni qurol nomi, keyin qo'shtirnoq ichida skin nomi.
 Qoidalar:
 - "weapon" — qurol nomi (AKR, M4, AWM, Karambit, ...), "name" — skin nomi.
 - "count" — agar katakda "x2" kabi miqdor ko'rsatilgan bo'lsa shu son, aks holda 1.
 - "box" — shu katak (rasm + yozuv) joylashgan to'rtburchak: [x, y, kenglik, balandlik], rasmning chap-yuqori burchagiga nisbatan 0 dan 1 gacha kasr sifatida.
 - Faqat aniq o'qiy olgan predmetlarni qo'sh, taxmin qilma. Stiker, charm, graffiti, quti ham bo'lsa, weapon bo'sh qoldirib name'ga nomini yoz.`;
 
-function parseItems(text: string): ScannedItem[] {
+function parseItems(raw: string): ScannedItem[] {
+  const text = raw.replace(/<think>[\s\S]*?<\/think>/g, "");
   const arr = text.match(/\[[\s\S]*\]/)?.[0];
   try {
     if (arr) return JSON.parse(arr);
@@ -68,7 +74,7 @@ async function scanGroq(cfg: ScanSettings, base64: string, mediaType: string): P
     body: JSON.stringify({
       model: cfg.groqModel,
       temperature: 0,
-      max_tokens: 4096,
+      max_tokens: 8192,
       response_format: { type: "json_object" },
       messages: [{
         role: "user",
