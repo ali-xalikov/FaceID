@@ -6,15 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:app": "next build && node scripts/prepare-app.mjs && cap sync android"
   },
   "dependencies": {
+    "@capacitor/core": "^8.6.2",
     "face-api.js": "^0.22.2",
     "next": "16.3.4",
     "react": "^19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

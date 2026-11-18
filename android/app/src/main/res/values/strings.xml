@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SO2 Inventar</string>
+    <string name="title_activity_main">SO2 Inventar</string>
+    <string name="package_name">com.standoff.inventory</string>
+    <string name="custom_url_scheme">com.standoff.inventory</string>
+</resources>

@@ -10,6 +10,7 @@ import {
   parseBulk,
   saveSkins,
 } from "@/lib/skins";
+import { getApiKey, scanImage, setApiKey } from "@/lib/scan";
 
 type Row = {
   key: number;
@@ -42,9 +43,12 @@ export default function SkinsPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
 
   useEffect(() => {
     setSkins(loadSkins());
+    setKeyInput(getApiKey());
     setReady(true);
   }, []);
   useEffect(() => {
@@ -66,14 +70,7 @@ export default function SkinsPage() {
     setPreview(URL.createObjectURL(file));
     try {
       const { data, type } = await fileToBase64(file);
-      const res = await fetch("/api/scan", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ image: data, mediaType: type }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Xatolik");
-      const items: ScannedItem[] = json.items;
+      const items: ScannedItem[] = await scanImage(data, type);
       setRows(
         items.map((it, i) => {
           const m = findMatches(skins, it.weapon ?? "", it.name ?? "");
@@ -102,7 +99,8 @@ export default function SkinsPage() {
   return (
     <main className="mx-auto min-h-screen max-w-4xl bg-zinc-950 px-4 py-6 text-zinc-100">
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Standoff 2 — Inventar narxi</h1>
+        <h1 className="text-xl font-bold sm:text-2xl">Standoff 2 — Inventar narxi</h1>
+        <button onClick={() => setShowKey((v) => !v)} className="text-xl" aria-label="Sozlamalar">⚙</button>
         <nav className="flex gap-1 rounded-lg bg-zinc-900 p-1 text-sm">
           {(["calc", "db"] as const).map((t) => (
             <button
@@ -115,6 +113,18 @@ export default function SkinsPage() {
           ))}
         </nav>
       </header>
+
+      {showKey && (
+        <div className="mb-4 rounded-xl bg-zinc-900 p-4">
+          <p className="mb-2 text-sm text-zinc-400">Anthropic API kalit (faqat shu qurilmada saqlanadi)</p>
+          <div className="flex gap-2">
+            <input type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)}
+              placeholder="sk-ant-..." className="min-w-0 flex-1 rounded bg-zinc-800 p-2 text-sm" />
+            <button onClick={() => { setApiKey(keyInput); setShowKey(false); }}
+              className="rounded bg-amber-500 px-4 text-sm font-semibold text-black">Saqlash</button>
+          </div>
+        </div>
+      )}
 
       {tab === "calc" ? (
         <section className="space-y-4">

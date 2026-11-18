@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "export", // statik ilova (Capacitor/APK uchun)
+  trailingSlash: true,
+  images: { unoptimized: true },
 };
 
 export default nextConfig;
