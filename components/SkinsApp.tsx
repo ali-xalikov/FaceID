@@ -338,7 +338,7 @@ export default function SkinsApp() {
                             placeholder="Qurol" className="w-24 rounded bg-zinc-800 p-1.5" />
                           <input value={r.name} onChange={(e) => patch(r.key, { name: e.target.value })}
                             placeholder="Skin nomi" className="min-w-28 flex-1 rounded bg-zinc-800 p-1.5" />
-                          <input value={r.price} type="number" onChange={(e) => patch(r.key, { price: e.target.value })}
+                          <input value={r.price} type="number" step="any" onChange={(e) => patch(r.key, { price: e.target.value })}
                             placeholder="Narx (G)" className="w-24 rounded bg-zinc-800 p-1.5" />
                           <button onClick={() => addFromRow(r)} className="rounded bg-amber-500 px-3 font-semibold text-black">
                             ＋ Bazaga qo&apos;shish
@@ -401,7 +401,7 @@ function SkinDb({
           <input placeholder="Skin nomi (Fire Drake)" value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="min-w-40 flex-1 rounded bg-zinc-800 p-2 text-sm" />
-          <input placeholder="Narx (gold)" type="number" value={form.price}
+          <input placeholder="Narx (gold)" type="number" step="any" value={form.price}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
             className="w-32 rounded bg-zinc-800 p-2 text-sm" />
           <label className="flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded bg-zinc-800" title="Rasm (ixtiyoriy)">
@@ -501,7 +501,7 @@ function SkinDb({
                   }} />
               </label>
               <span className="flex-1">{label(s)}</span>
-              <input type="number" value={s.price}
+              <input type="number" step="any" value={s.price}
                 onChange={(e) => setSkins((cur) => cur.map((x) => x.id === s.id ? { ...x, price: Number(e.target.value) || 0 } : x))}
                 className="w-28 rounded bg-zinc-800 p-1 text-right" />
               <span className="text-zinc-500">G</span>

@@ -12,14 +12,8 @@ const DEFAULT_CFG: SyncConfig = {
   code: "3y3c6w0e326v3x1v682j", // avtomatik sinxron kodi (qo'lda kiritish shart emas)
 };
 
+// Har doim ichki sozlama ishlatiladi (qurilmalar bitta bazada qoladi).
 export function loadSyncConfig(): SyncConfig {
-  try {
-    const raw = localStorage.getItem(CFG_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      return { ...DEFAULT_CFG, ...saved, code: saved.code || DEFAULT_CFG.code };
-    }
-  } catch {}
   return DEFAULT_CFG;
 }
 export function saveSyncConfig(c: SyncConfig) {

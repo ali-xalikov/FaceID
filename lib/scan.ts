@@ -43,6 +43,8 @@ Undagi har bir ko'rinib turgan skin/predmetni o'qib chiq. Faqat JSON massiv qayt
 [{"weapon":"AKR","name":"Fire Drake","count":1,"box":[0.05,0.10,0.15,0.20]}]
 Inventarda nomlar odatda shunday yoziladi: Butterfly "Starfall", M4A1 "Lincoln", AKR "Tag King" — ya'ni qurol nomi, keyin qo'shtirnoq ichida skin nomi.
 Qoidalar:
+- Agar katakda to'q sariq "ST" belgisi (StatTrak) bo'lsa, skin nomi oxiriga " ST" qo'sh (masalan "Genesis ST"). Kubik/zar belgisini e'tiborga olma.
+- "S1", "S2", "S3" bilan boshlangan qurollarni shunday qoldir (masalan weapon: "S2 AKR12", name: "Year of the Horse").
 - "weapon" — qurol nomi (AKR, M4, AWM, Karambit, ...), "name" — skin nomi.
 - "count" — agar katakda "x2" kabi miqdor ko'rsatilgan bo'lsa shu son, aks holda 1.
 - "box" — shu katak (rasm + yozuv) joylashgan to'rtburchak: [x, y, kenglik, balandlik], rasmning chap-yuqori burchagiga nisbatan 0 dan 1 gacha kasr sifatida.

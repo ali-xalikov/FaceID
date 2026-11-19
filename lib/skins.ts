@@ -15,14 +15,8 @@ export type ScannedItem = {
 
 export const STORAGE_KEY = "so2_skins_v1";
 
-// NAMUNA ma'lumotlar — narxlar taxminiy. Haqiqiy bazani "Skinlar bazasi" bo'limida to'ldiring.
-export const SEED_SKINS: Omit<Skin, "id">[] = [
-  { weapon: "AKR", name: "Fire Drake", price: 5000 },
-  { weapon: "M4", name: "Royal Dragon", price: 4000 },
-  { weapon: "AWM", name: "Dragon Glass", price: 9000 },
-  { weapon: "Butterfly Knife", name: "Fade", price: 25000 },
-  { weapon: "Karambit", name: "Scratch", price: 12000 },
-];
+// Baza buluttan (Supabase) yuklanadi; boshlang'ich namuna skinlar yo'q.
+export const SEED_SKINS: Omit<Skin, "id">[] = [];
 
 export const makeId = (weapon: string, name: string) =>
   normalize(`${weapon} ${name}`).replace(/\s+/g, "-");
@@ -100,7 +94,9 @@ export function parseBulk(text: string): Omit<Skin, "id">[] {
     // oxirgi raqam = narx
     const m = line.match(/^(.*?)[\s;,:\t]+([\d][\d\s.,]*)\s*(?:g|gold)?$/i);
     if (!m) continue;
-    const price = Number(m[2].replace(/[\s.,]/g, ""));
+    const numStr = m[2].trim().replace(/\s+/g, "");
+    // "87.99" / "87,99" — o'nli; "1.000" / "1 000" — minglik ajratgich
+    const price = /^\d+[.,]\d{1,2}$/.test(numStr) ? Number(numStr.replace(",", ".")) : Number(numStr.replace(/[.,]/g, ""));
     const label = m[1].replace(/[;,:\t]+$/, "").trim();
     if (!price || !label) continue;
     const parts = label.split("|").map((p) => p.trim());
