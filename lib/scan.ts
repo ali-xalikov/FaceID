@@ -56,11 +56,16 @@ const GROQ_SUFFIX = '\nJavobni {"items":[...]} ko\'rinishidagi JSON obyekt sifat
 async function post(label: string, url: string, init: RequestInit): Promise<Response> {
   let last: unknown;
   for (let i = 0; i < 2; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 130_000);
     try {
-      return await fetch(url, init);
+      return await fetch(url, { ...init, signal: ctrl.signal });
     } catch (e) {
+      if (ctrl.signal.aborted) throw new Error(`${label}: 2 daqiqada javob kelmadi. Qayta urinib ko'ring.`);
       last = e;
       await new Promise((r) => setTimeout(r, 800));
+    } finally {
+      clearTimeout(timer);
     }
   }
   const host = (() => { try { return new URL(url).host; } catch { return url; } })();
