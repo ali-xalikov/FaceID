@@ -52,6 +52,23 @@ Qoidalar:
 
 const GROQ_SUFFIX = '\nJavobni {"items":[...]} ko\'rinishidagi JSON obyekt sifatida qaytar.';
 
+/** fetch + tarmoq xatolarini tushunarli qiladi; 1 marta qayta urinadi (mobil internet uzilishlari uchun). */
+async function post(label: string, url: string, init: RequestInit): Promise<Response> {
+  let last: unknown;
+  for (let i = 0; i < 2; i++) {
+    try {
+      return await fetch(url, init);
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+  const host = (() => { try { return new URL(url).host; } catch { return url; } })();
+  throw new Error(
+    `${label}: ${host} ga ulanib bo'lmadi (${last instanceof Error ? last.message : last}). Internetni tekshiring yoki ⚙ da boshqa AI tanlang.`,
+  );
+}
+
 function parseItems(raw: string): ScannedItem[] {
   const text = raw.replace(/<think>[\s\S]*?<\/think>/g, "");
   const arr = text.match(/\[[\s\S]*\]/)?.[0];
@@ -75,7 +92,7 @@ export async function scanImage(base64: string, mediaType: string): Promise<Scan
 /** Supabase Edge Function orqali (Groq kaliti serverda, telefonda kalit kerak emas). */
 async function scanCloud(base64: string, mediaType: string): Promise<ScannedItem[]> {
   const c = loadSyncConfig();
-  const res = await fetch(`${c.url.replace(/\/+$/, "")}/functions/v1/scan`, {
+  const res = await post("Bulut AI", `${c.url.replace(/\/+$/, "")}/functions/v1/scan`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -95,7 +112,7 @@ async function scanCloud(base64: string, mediaType: string): Promise<ScannedItem
 
 async function scanGroq(cfg: ScanSettings, base64: string, mediaType: string): Promise<ScannedItem[]> {
   if (!cfg.groqKey) throw new Error("Avval Groq API kalitni kiriting (yuqoridagi ⚙ tugma).");
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const res = await post("Groq", "https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${cfg.groqKey}` },
     body: JSON.stringify({
@@ -123,7 +140,7 @@ async function scanClaude(base64: string, mediaType: string): Promise<ScannedIte
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("Avval API kalitni kiriting (yuqoridagi ⚙ tugma).");
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await post("Claude", "https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "x-api-key": apiKey,

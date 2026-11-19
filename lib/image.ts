@@ -1,12 +1,12 @@
 /** Rasm faylini kichraytirib JPEG base64 qiladi (AI'ga yuborish uchun). */
 export async function prepareImage(file: File): Promise<{ data: string; type: string; bmp: ImageBitmap }> {
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+  const scale = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");
   c.width = Math.round(bmp.width * scale);
   c.height = Math.round(bmp.height * scale);
   c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-  return { data: c.toDataURL("image/jpeg", 0.9).split(",")[1], type: "image/jpeg", bmp };
+  return { data: c.toDataURL("image/jpeg", 0.8).split(",")[1], type: "image/jpeg", bmp };
 }
 
 /** Skrinshotdan katakni qirqib, kichik (80x80) rasm qaytaradi. Box yo'q/noto'g'ri bo'lsa "" . */
