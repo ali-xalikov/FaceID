@@ -10,7 +10,7 @@ import {
   parseBulk,
   saveSkins,
 } from "@/lib/skins";
-import { type SyncConfig, loadSyncConfig, pullSkins, pushSkins, randomCode, saveSyncConfig } from "@/lib/sync";
+import { type SyncConfig, loadSyncConfig, pullSkins, pushSkins } from "@/lib/sync";
 import { type Provider, type ScanSettings, DEFAULT_GROQ_MODEL, loadScanSettings, saveScanSettings, scanImage } from "@/lib/scan";
 import { cropThumb, fileThumb, prepareImage } from "@/lib/image";
 import { type UpdateInfo, BUILD_ID, checkUpdate } from "@/lib/update";
@@ -41,7 +41,6 @@ export default function SkinsApp() {
   const [error, setError] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [scan, setScan] = useState<ScanSettings>({ provider: "claude", claudeKey: "", groqKey: "", groqModel: DEFAULT_GROQ_MODEL });
-  const [cfg, setCfg] = useState<SyncConfig>({ url: "", anonKey: "", code: "" });
   const [syncMsg, setSyncMsg] = useState("");
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const fromCloud = useRef(true); // keyingi o'zgarish foydalanuvchidan emas (yuklash/bulut)
@@ -59,7 +58,6 @@ export default function SkinsApp() {
     setSkins(loadSkins());
     setScan(loadScanSettings());
     const c = loadSyncConfig();
-    setCfg(c);
     setReady(true);
     checkUpdate().then(setUpdate);
     if (c.code) void syncNow(c, true);
@@ -171,28 +169,6 @@ export default function SkinsApp() {
     setSkins((cur) => cur.map((x) => (x.id === r.skinId ? { ...x, image: r.thumb } : x)));
   }
 
-  async function runSync(kind: "push" | "pull") {
-    setSyncMsg("...");
-    try {
-      saveSyncConfig(cfg);
-      if (kind === "push") {
-        await pushSkins(cfg, skins);
-        dirty(false);
-        setSyncMsg(`✔ ${skins.length} ta skin bulutga yuklandi`);
-      } else {
-        const remote = await pullSkins(cfg);
-        if (!remote) return setSyncMsg("Bulutda baza hali yo'q. Avval boshqa qurilmadan yuklang.");
-        if (!confirm(`Buluttagi ${remote.length} ta skin shu qurilmadagi ${skins.length} tasining o'rniga yoziladi. Davom etasizmi?`)) return setSyncMsg("");
-        fromCloud.current = true;
-        setSkins(() => remote);
-        dirty(false);
-        setSyncMsg(`✔ ${remote.length} ta skin buluttan olindi`);
-      }
-    } catch (e) {
-      setSyncMsg("✖ " + (e instanceof Error ? e.message : String(e)));
-    }
-  }
-
   const patch = (key: number, p: Partial<Row>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...p, auto: false } : r)));
 
@@ -231,14 +207,16 @@ export default function SkinsApp() {
           <p className="mb-3 text-xs text-zinc-500">Versiya: {BUILD_ID.slice(0, 7)}</p>
           <p className="mb-2 text-sm text-zinc-400">Rasm o&apos;qish uchun AI (faqat shu qurilmada saqlanadi)</p>
           <div className="mb-2 flex gap-1 rounded-lg bg-zinc-800 p-1 text-sm">
-            {(["claude", "groq"] as Provider[]).map((p) => (
+            {(["cloud", "groq", "claude"] as Provider[]).map((p) => (
               <button key={p} onClick={() => setScan({ ...scan, provider: p })}
                 className={`flex-1 rounded-md py-1.5 ${scan.provider === p ? "bg-amber-500 font-semibold text-black" : "text-zinc-400"}`}>
-                {p === "claude" ? "Claude (aniqroq)" : "Groq (bepul)"}
+                {p === "cloud" ? "Bulut (kalitsiz)" : p === "groq" ? "Groq" : "Claude"}
               </button>
             ))}
           </div>
-          {scan.provider === "claude" ? (
+          {scan.provider === "cloud" ? (
+            <p className="text-xs text-zinc-500">Kalit kerak emas: rasm Supabase serveri orqali Groq'ga yuboriladi.</p>
+          ) : scan.provider === "claude" ? (
             <input type="password" value={scan.claudeKey} onChange={(e) => setScan({ ...scan, claudeKey: e.target.value })}
               placeholder="Anthropic key: sk-ant-..." className="w-full rounded bg-zinc-800 p-2 text-sm" />
           ) : (
@@ -252,23 +230,9 @@ export default function SkinsApp() {
           <button onClick={() => { saveScanSettings(scan); setSyncMsg("✔ AI sozlamalari saqlandi"); }}
             className="mt-2 w-full rounded bg-amber-500 py-2 text-sm font-semibold text-black">Saqlash</button>
 
-          <p className="mb-2 mt-5 text-sm text-zinc-400">Bulut sinxronlash (Supabase)</p>
-          <div className="space-y-2">
-            <input value={cfg.url} onChange={(e) => setCfg({ ...cfg, url: e.target.value.trim() })}
-              placeholder="Supabase Project URL (https://xxxx.supabase.co)" className="w-full rounded bg-zinc-800 p-2 text-sm" />
-            <input value={cfg.anonKey} onChange={(e) => setCfg({ ...cfg, anonKey: e.target.value.trim() })}
-              placeholder="Supabase anon (public) key" className="w-full rounded bg-zinc-800 p-2 text-sm" />
-            <div className="flex gap-2">
-              <input value={cfg.code} onChange={(e) => setCfg({ ...cfg, code: e.target.value.trim() })}
-                placeholder="Sinxron kod (barcha qurilmada bir xil)" className="min-w-0 flex-1 rounded bg-zinc-800 p-2 text-sm" />
-              <button onClick={() => setCfg({ ...cfg, code: randomCode() })} className="rounded bg-zinc-800 px-3 text-sm">Yangi kod</button>
-            </div>
-            <div className="flex gap-2 text-sm">
-              <button onClick={() => runSync("push")} className="flex-1 rounded bg-amber-500 py-2 font-semibold text-black">⬆ Bulutga yuklash</button>
-              <button onClick={() => runSync("pull")} className="flex-1 rounded bg-zinc-800 py-2">⬇ Buluttan olish</button>
-            </div>
-            {syncMsg && <p className="text-sm text-zinc-300">{syncMsg}</p>}
-          </div>
+          <p className="mt-5 text-sm text-zinc-400">Bulut sinxronlash: <span className="text-emerald-400">avtomatik yoqilgan ✔</span></p>
+          <p className="mt-1 text-xs text-zinc-500">Skinlar, narxlar va rasmlar o&apos;zgarishi bilan bulutga saqlanadi va ilova ochilganda yangilanadi. Kod kiritish shart emas.</p>
+          <button onClick={() => syncNow(loadSyncConfig())} className="mt-2 w-full rounded bg-zinc-800 py-2 text-sm">🔄 Hozir sinxronlash</button>
         </div>
       )}
 

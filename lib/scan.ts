@@ -1,8 +1,9 @@
 import type { ScannedItem } from "@/lib/skins";
+import { loadSyncConfig } from "@/lib/sync";
 
 const KEY_STORAGE = "so2_api_key";
 
-export type Provider = "claude" | "groq";
+export type Provider = "cloud" | "claude" | "groq";
 export const DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b";
 const OLD_GROQ_MODELS = ["meta-llama/llama-4-scout-17b-16e-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct"];
 
@@ -15,7 +16,7 @@ const lsSet = (k: string, v: string) => {
 
 export type ScanSettings = { provider: Provider; claudeKey: string; groqKey: string; groqModel: string };
 export const loadScanSettings = (): ScanSettings => ({
-  provider: lsGet("so2_provider", "claude") === "groq" ? "groq" : "claude",
+  provider: ((p) => (p === "claude" || p === "groq" ? p : "cloud"))(lsGet("so2_provider", "cloud")),
   claudeKey: lsGet(KEY_STORAGE),
   groqKey: lsGet("so2_groq_key"),
   groqModel: (() => {
@@ -47,6 +48,8 @@ Qoidalar:
 - "box" — shu katak (rasm + yozuv) joylashgan to'rtburchak: [x, y, kenglik, balandlik], rasmning chap-yuqori burchagiga nisbatan 0 dan 1 gacha kasr sifatida.
 - Faqat aniq o'qiy olgan predmetlarni qo'sh, taxmin qilma. Stiker, charm, graffiti, quti ham bo'lsa, weapon bo'sh qoldirib name'ga nomini yoz.`;
 
+const GROQ_SUFFIX = '\nJavobni {"items":[...]} ko\'rinishidagi JSON obyekt sifatida qaytar.';
+
 function parseItems(raw: string): ScannedItem[] {
   const text = raw.replace(/<think>[\s\S]*?<\/think>/g, "");
   const arr = text.match(/\[[\s\S]*\]/)?.[0];
@@ -63,7 +66,29 @@ function parseItems(raw: string): ScannedItem[] {
 export async function scanImage(base64: string, mediaType: string): Promise<ScannedItem[]> {
   const cfg = loadScanSettings();
   if (cfg.provider === "groq") return scanGroq(cfg, base64, mediaType);
-  return scanClaude(base64, mediaType);
+  if (cfg.provider === "claude") return scanClaude(base64, mediaType);
+  return scanCloud(base64, mediaType);
+}
+
+/** Supabase Edge Function orqali (Groq kaliti serverda, telefonda kalit kerak emas). */
+async function scanCloud(base64: string, mediaType: string): Promise<ScannedItem[]> {
+  const c = loadSyncConfig();
+  const res = await fetch(`${c.url.replace(/\/+$/, "")}/functions/v1/scan`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      apikey: c.anonKey,
+      authorization: `Bearer ${c.anonKey}`,
+    },
+    body: JSON.stringify({ image: base64, mediaType, prompt: PROMPT + GROQ_SUFFIX }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    if (t.includes("GROQ_API_KEY")) throw new Error("Serverda Groq kaliti hali o'rnatilmagan (Supabase → Edge Functions → Secrets).");
+    throw new Error(`Bulut AI xatosi (${res.status}): ${t.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return parseItems(String(data.choices?.[0]?.message?.content ?? ""));
 }
 
 async function scanGroq(cfg: ScanSettings, base64: string, mediaType: string): Promise<ScannedItem[]> {
@@ -79,7 +104,7 @@ async function scanGroq(cfg: ScanSettings, base64: string, mediaType: string): P
       messages: [{
         role: "user",
         content: [
-          { type: "text", text: PROMPT + '\nJavobni {"items":[...]} ko\'rinishidagi JSON obyekt sifatida qaytar.' },
+          { type: "text", text: PROMPT + GROQ_SUFFIX },
           { type: "image_url", image_url: { url: `data:${mediaType};base64,${base64}` } },
         ],
       }],

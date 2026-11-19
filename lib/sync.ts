@@ -9,13 +9,16 @@ const DEFAULT_CFG: SyncConfig = {
   url: "https://gvvueaqwwowvovjhemcb.supabase.co",
   anonKey:
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2dnVlYXF3d293dm92amhlbWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwMjI4NTksImV4cCI6MjExMDU5ODg1OX0.cS7WMxQLH6Jjlkl49PInORDsE1g2ZLmw05C7-7d2Zgw",
-  code: "",
+  code: "3y3c6w0e326v3x1v682j", // avtomatik sinxron kodi (qo'lda kiritish shart emas)
 };
 
 export function loadSyncConfig(): SyncConfig {
   try {
     const raw = localStorage.getItem(CFG_KEY);
-    if (raw) return { ...DEFAULT_CFG, ...JSON.parse(raw) };
+    if (raw) {
+      const saved = JSON.parse(raw);
+      return { ...DEFAULT_CFG, ...saved, code: saved.code || DEFAULT_CFG.code };
+    }
   } catch {}
   return DEFAULT_CFG;
 }
