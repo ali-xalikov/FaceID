@@ -13,6 +13,7 @@ import {
 import { type SyncConfig, loadSyncConfig, pullSkins, pushSkins } from "@/lib/sync";
 import { type Provider, type ScanSettings, DEFAULT_GROQ_MODEL, loadScanSettings, saveScanSettings, scanImage } from "@/lib/scan";
 import { cropThumb, fileThumb, prepareImage } from "@/lib/image";
+import { skinImage } from "@/lib/skin-images";
 import { type UpdateInfo, BUILD_ID, checkUpdate } from "@/lib/update";
 
 type Row = {
@@ -284,9 +285,9 @@ export default function SkinsApp() {
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={r.thumb} alt="skrinshotdan" title="Skrinshotdan" className="h-14 w-14 rounded bg-zinc-800 object-contain" />
                           )}
-                          {skin?.image && (
+                          {skinImage(skin) && (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={skin.image} alt="bazadan" title="Bazadan" className="h-14 w-14 rounded bg-zinc-800 object-contain ring-1 ring-emerald-600" />
+                            <img src={skinImage(skin)} alt="bazadan" title="Bazadan" className="h-14 w-24 rounded bg-zinc-800 object-contain ring-1 ring-emerald-600" />
                           )}
                         </div>
                         <div className="min-w-40 flex-1">
@@ -345,7 +346,7 @@ export default function SkinsApp() {
                           </button>
                         </div>
                       )}
-                      {skin && !skin.image && r.thumb && (
+                      {skin && !skinImage(skin) && r.thumb && (
                         <button onClick={() => saveImage(r)} className="mt-2 text-xs text-amber-400">
                           📷 Skrinshotdagi rasmni bazaga saqlash
                         </button>
@@ -485,9 +486,9 @@ function SkinDb({
           {shown.map((s) => (
             <li key={s.id} className="flex items-center gap-3 p-2.5 text-sm">
               <label className="cursor-pointer" title="Rasm qo'yish">
-                {s.image ? (
+                {skinImage(s) ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.image} alt="" className="h-9 w-9 rounded bg-zinc-800 object-contain" />
+                  <img src={skinImage(s)} alt="" className="h-9 w-14 rounded bg-zinc-800 object-contain" />
                 ) : (
                   <span className="flex h-9 w-9 items-center justify-center rounded bg-zinc-800 text-zinc-500">📷</span>
                 )}
